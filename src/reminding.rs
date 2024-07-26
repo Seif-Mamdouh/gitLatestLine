@@ -19,12 +19,12 @@ pub fn show_latest_changes() {
                     
                     // Get the actual lines changed
                     let diff_output = Command::new("git")
-                        .args(&["diff", &path.to_string_lossy()])
+                        .args(&["diff", "HEAD~1", "HEAD", "--", &path.to_string_lossy()])
                         .output()
                         .expect("Failed to execute git diff command");
 
                     if !diff_output.stdout.is_empty() {
-                        println!("Changes:\n{}", String::from_utf8_lossy(&diff_output.stdout));
+                        println!("Changes in file {:?}:\n{}", path, String::from_utf8_lossy(&diff_output.stdout));
                     }
                 }
             }
@@ -33,5 +33,3 @@ pub fn show_latest_changes() {
         eprintln!("Failed to read directory");
     }
 }
-
-
