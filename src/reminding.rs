@@ -1,35 +1,39 @@
 use std::process::Command;
-use std::fs;
 
 pub fn show_latest_changes() {
-    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    let output = Command::new("git")
+        .args(&["log", "-1", "--name-only", "--pretty=format:%h %s"])
+        .output()
+        .expect("Failed to execute git command");
 
-    if let Ok(entries) = fs::read_dir(current_dir) {
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-            if path.is_file() {
-                // Get the latest commit message
-                let output = Command::new("git")
-                    .args(&["log", "-1", "--pretty=format:%h %s", &path.to_string_lossy()])
+    if !output.stdout.is_empty() {
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut lines = output_str.lines();
+        
+        if let Some(commit_line) = lines.next() {
+            println!("Latest commit: {}", commit_line);
+            
+            for file in lines {
+                let file_diff = Command::new("git")
+                    .args(&["diff", "HEAD~1", "HEAD", "--", file])
                     .output()
-                    .expect("Failed to execute git command");
+                    .expect("Failed to execute git diff command");
 
-                if !output.stdout.is_empty() {
-                    println!("File: {:?}, Change: {}", path.file_name().unwrap(), String::from_utf8_lossy(&output.stdout));
-                    
-                    // Get the actual lines changed
-                    let diff_output = Command::new("git")
-                        .args(&["diff", "HEAD~1", "HEAD", "--", &path.to_string_lossy()])
-                        .output()
-                        .expect("Failed to execute git diff command");
+                let diff_str = String::from_utf8_lossy(&file_diff.stdout);
+                let changed_lines: Vec<&str> = diff_str.lines()
+                    .filter(|line| line.starts_with('+') || line.starts_with('-'))
+                    .collect();
 
-                    if !diff_output.stdout.is_empty() {
-                        println!("Changes in file {:?}:\n{}", path, String::from_utf8_lossy(&diff_output.stdout));
+                if !changed_lines.is_empty() {
+                    println!("File: {}", file);
+                    println!("Changed lines:");
+                    for line in changed_lines {
+                        println!("  {}", line);
                     }
                 }
             }
         }
     } else {
-        eprintln!("Failed to read directory");
+        println!("No changes found");
     }
 }
