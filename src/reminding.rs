@@ -35,10 +35,10 @@ pub fn show_latest_changes() {
         }
     } else {
         println!("No changes found");
+        println!("djndkjndndddf");
     }
 }
 
 
 
 
-println!("djndkjndndddf");
